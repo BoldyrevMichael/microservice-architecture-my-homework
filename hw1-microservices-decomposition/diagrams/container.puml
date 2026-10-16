@@ -1,0 +1,106 @@
+@startuml container
+!include <C4/C4_Container>
+
+LAYOUT_TOP_DOWN()
+title Диаграмма контейнеров: онлайн-заказ сэндвичей
+
+Person(customer, "Клиент")
+Person(staff, "Персонал точки", "Сотрудник, курьер, владелец")
+Person(manager, "Менеджер сети")
+
+System_Boundary(blt, "Система онлайн-заказов") {
+  Container(mobile, "Мобильное приложение", "iOS / Android", "Заказ, оплата, статус, маршрут до точки")
+  Container(web, "Веб-приложение клиента", "SPA", "То же для браузера")
+  Container(staff_app, "Приложение точки", "SPA", "Очередь кухни, выдача, курьеры, настройки точки, локальные акции")
+  Container(admin_app, "Приложение сети", "SPA", "Меню, национальные акции, точки")
+
+  Container(gateway, "API Gateway", "nginx ingress", "Маршрутизация, TLS, проверка токена через identity-service")
+
+  Boundary(customers, "Клиенты") {
+    Container(identity, "identity-service", "Java, Spring Boot", "Регистрация, вход, токены")
+    ContainerDb(identity_db, "identity db", "PostgreSQL")
+    Container(customer_svc, "customer-service", "Java, Spring Boot", "Профиль клиента, адреса")
+    ContainerDb(customer_db, "customer db", "PostgreSQL")
+  }
+  Boundary(offer, "Предложение") {
+    Container(shop, "shop-service", "Java, Spring Boot", "Точки, владельцы, часы работы, зоны доставки")
+    ContainerDb(shop_db, "shop db", "PostgreSQL")
+    Container(catalog, "catalog-service", "Java, Spring Boot", "Меню, ингредиенты, цены")
+    ContainerDb(catalog_db, "catalog db", "PostgreSQL")
+    Container(promotion, "promotion-service", "Java, Spring Boot", "Национальные и локальные акции дня")
+    ContainerDb(promotion_db, "promotion db", "PostgreSQL")
+  }
+  Boundary(ordering, "Заказ и оплата") {
+    Container(order, "order-service", "Java, Spring Boot", "Оформление и жизненный цикл заказа, время выдачи")
+    ContainerDb(order_db, "order db", "PostgreSQL")
+    Container(billing, "billing-service", "Java, Spring Boot", "Платежи онлайн и при получении, возвраты")
+    ContainerDb(billing_db, "billing db", "PostgreSQL")
+  }
+  Boundary(fulfillment, "Выполнение заказа") {
+    Container(inventory, "inventory-service", "Java, Spring Boot", "Остатки ингредиентов точки, резервирование")
+    ContainerDb(inventory_db, "inventory db", "PostgreSQL")
+    Container(kitchen, "kitchen-service", "Java, Spring Boot", "Очередь приготовления, время готовности")
+    ContainerDb(kitchen_db, "kitchen db", "PostgreSQL")
+    Container(delivery, "delivery-service", "Java, Spring Boot", "Курьеры точки, назначение, слоты")
+    ContainerDb(delivery_db, "delivery db", "PostgreSQL")
+  }
+  Boundary(support, "Вспомогательные") {
+    Container(geo, "geo-service", "Java, Spring Boot", "Маршруты и время в пути поверх внешних карт")
+    Container(notification, "notification-service", "Java, Spring Boot", "Уведомления клиентам, история отправок")
+    ContainerDb(notification_db, "notification db", "PostgreSQL")
+  }
+
+  ContainerQueue(kafka, "Шина событий", "Apache Kafka", "Доменные события; состав — в таблице контрактов")
+}
+
+System_Ext(maps, "Картографические сервисы")
+System_Ext(psp, "Платёжный провайдер")
+System_Ext(messaging, "Провайдер рассылок")
+
+Rel(customer, mobile, "Использует")
+Rel(customer, web, "Использует")
+Rel(staff, staff_app, "Использует")
+Rel(manager, admin_app, "Использует")
+
+Rel(mobile, gateway, "REST/JSON", "HTTPS")
+Rel(web, gateway, "REST/JSON", "HTTPS")
+Rel(staff_app, gateway, "REST/JSON", "HTTPS")
+Rel(admin_app, gateway, "REST/JSON", "HTTPS")
+
+Rel(gateway, customers, "REST/JSON", "HTTP")
+Rel(gateway, offer, "REST/JSON", "HTTP")
+Rel(gateway, ordering, "REST/JSON", "HTTP")
+Rel(gateway, fulfillment, "REST/JSON", "HTTP")
+Rel(gateway, notification, "REST/JSON", "HTTP")
+
+Rel(identity, identity_db, " ")
+Rel(customer_svc, customer_db, " ")
+Rel(shop, shop_db, " ")
+Rel(catalog, catalog_db, " ")
+Rel(promotion, promotion_db, " ")
+Rel(order, order_db, " ")
+Rel(billing, billing_db, " ")
+Rel(inventory, inventory_db, " ")
+Rel(kitchen, kitchen_db, " ")
+Rel(delivery, delivery_db, " ")
+Rel(notification, notification_db, " ")
+
+Rel(order, offer, "Цены, акции, режим точки", "HTTP")
+Rel(order, inventory, "Резерв ингредиентов", "HTTP")
+Rel(order, billing, "Платёж", "HTTP")
+Rel(order, kitchen, "Время готовности", "HTTP")
+Rel(order, geo, "Маршрут до точки", "HTTP")
+Rel(delivery, geo, "Время в пути", "HTTP")
+Rel(shop, geo, "Расстояние до точек", "HTTP")
+
+BiRel(customers, kafka, "События", "Kafka")
+BiRel(ordering, kafka, "События", "Kafka")
+BiRel(fulfillment, kafka, "События", "Kafka")
+Rel(kafka, notification, "События", "Kafka")
+
+Rel(geo, maps, "Маршруты, пробки", "HTTPS")
+Rel(billing, psp, "Платежи", "HTTPS")
+Rel(notification, messaging, "E-mail, SMS, push", "HTTPS")
+
+SHOW_LEGEND()
+@enduml
