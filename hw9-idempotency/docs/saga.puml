@@ -1,0 +1,41 @@
+@startuml
+title Сага создания заказа (хореография через Kafka)
+participant "order-service" as o
+queue "Kafka" as k
+participant "billing-service" as b
+participant "warehouse-service" as w
+participant "delivery-service" as d
+participant "notification-service" as n
+
+o -> o: заказ NEW
+o -> k: order.created {снимок заказа}
+k -> b: order.created
+alt денег хватает
+  b -> b: списать price
+  b -> k: order.payment COMPLETED
+else
+  b -> k: order.payment FAILED (insufficient funds)
+end
+k -> o: order.payment → PAID | CANCELLED
+k -> w: order.payment
+alt COMPLETED и товар есть
+  w -> w: резерв quantity
+  w -> k: order.stock RESERVED
+else COMPLETED, товара нет
+  w -> k: order.stock FAILED (out of stock)
+end
+k -> o: order.stock → RESERVED | CANCELLED
+k -> b: order.stock FAILED → вернуть price
+k -> d: order.stock
+alt RESERVED и слот свободен
+  d -> d: резерв курьера
+  d -> k: order.delivery RESERVED
+else RESERVED, слот занят
+  d -> k: order.delivery FAILED (no courier)
+end
+k -> o: order.delivery → CONFIRMED | CANCELLED
+k -> w: order.delivery FAILED → снять резерв
+k -> b: order.delivery FAILED → вернуть price
+o -> k: order.completed CONFIRMED | CANCELLED
+k -> n: order.completed → письмо
+@enduml
