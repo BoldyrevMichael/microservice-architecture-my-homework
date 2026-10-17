@@ -1,0 +1,6 @@
+apiVersion: v2
+name: user-service
+description: "Пользователи: регистрация, вход по JWT, профиль (hw6)"
+type: application
+version: 0.1.0
+appVersion: hw6
