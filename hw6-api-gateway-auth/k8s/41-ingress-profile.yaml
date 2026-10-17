@@ -1,0 +1,23 @@
+# защищённые пути: перед проксированием ingress-nginx вызывает /auth/verify
+# с заголовком Authorization клиента и подставляет в запрос X-User-Id из ответа
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: user-service-profile
+  namespace: msa
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: http://user-service.msa.svc.cluster.local:8000/auth/verify
+    nginx.ingress.kubernetes.io/auth-response-headers: X-User-Id
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: arch.homework
+      http:
+        paths:
+          - path: /profile
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service
+                port:
+                  name: http

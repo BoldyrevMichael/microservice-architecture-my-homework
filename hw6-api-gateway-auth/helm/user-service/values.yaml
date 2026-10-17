@@ -1,0 +1,29 @@
+replicaCount: 2
+
+image:
+  repository: boldyrevma/user-service
+  tag: hw6
+
+# имя сервиса чтения-записи кластера CloudNativePG и база;
+# secretName должен совпадать с cluster.initdb.secret.name в db/values.yaml
+db:
+  host: user-db-rw
+  port: 5432
+  name: users
+  secretName: user-db-credentials
+  username: app
+  password: app-secret-hw6
+
+jwt:
+  secret: hw6-jwt-signing-secret-0123456789abcdef0123456789
+
+ingress:
+  host: arch.homework
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi

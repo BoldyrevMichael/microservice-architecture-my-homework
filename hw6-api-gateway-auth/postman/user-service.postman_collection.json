@@ -1,0 +1,171 @@
+{
+  "info": {
+    "name": "hw6 user-service: регистрация, вход, профиль",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "arch.homework" },
+    { "key": "user1", "value": "" }, { "key": "pass1", "value": "" }, { "key": "token1", "value": "" }, { "key": "id1", "value": "" },
+    { "key": "user2", "value": "" }, { "key": "pass2", "value": "" }, { "key": "token2", "value": "" }, { "key": "id2", "value": "" },
+    { "key": "newFirstName", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Регистрация пользователя 1",
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "pm.collectionVariables.set('user1', pm.variables.replaceIn('{{$randomUserName}}') + Date.now());",
+          "pm.collectionVariables.set('pass1', pm.variables.replaceIn('{{$randomPassword}}'));"
+        ] } },
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('status 201', () => pm.response.to.have.status(201));",
+          "const u = pm.response.json();",
+          "pm.test('id assigned, no password in response', () => { pm.expect(u.id).to.be.a('number'); pm.expect(u).to.not.have.property('password'); });",
+          "pm.collectionVariables.set('id1', u.id);"
+        ] } }
+      ],
+      "request": {
+        "method": "POST", "url": "http://{{baseUrl}}/register",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{user1}}\",\n  \"password\": \"{{pass1}}\",\n  \"firstName\": \"{{$randomFirstName}}\",\n  \"lastName\": \"{{$randomLastName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phone\": \"+7{{$randomPhoneNumber}}\"\n}" }
+      }
+    },
+    {
+      "name": "2. Профиль без входа недоступен",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 401', () => pm.response.to.have.status(401));"
+      ] } }],
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/profile" }
+    },
+    {
+      "name": "3. Изменение профиля без входа недоступно",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 401', () => pm.response.to.have.status(401));"
+      ] } }],
+      "request": {
+        "method": "PUT", "url": "http://{{baseUrl}}/profile",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"firstName\": \"Hacker\"}" }
+      }
+    },
+    {
+      "name": "4. Вход пользователя 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "const t = pm.response.json().token;",
+        "pm.test('token issued', () => pm.expect(t).to.be.a('string').and.not.empty);",
+        "pm.collectionVariables.set('token1', t);"
+      ] } }],
+      "request": {
+        "method": "POST", "url": "http://{{baseUrl}}/login",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"username\": \"{{user1}}\", \"password\": \"{{pass1}}\"}" }
+      }
+    },
+    {
+      "name": "5. Изменение профиля пользователя 1",
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "pm.collectionVariables.set('newFirstName', pm.variables.replaceIn('{{$randomFirstName}}'));"
+        ] } },
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('status 200', () => pm.response.to.have.status(200));",
+          "pm.test('firstName updated', () => pm.expect(pm.response.json().firstName).to.eql(pm.collectionVariables.get('newFirstName')));"
+        ] } }
+      ],
+      "request": {
+        "method": "PUT", "url": "http://{{baseUrl}}/profile",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token1}}" }],
+        "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"{{newFirstName}}\",\n  \"lastName\": \"{{$randomLastName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phone\": \"+7{{$randomPhoneNumber}}\"\n}" }
+      }
+    },
+    {
+      "name": "6. Профиль пользователя 1 изменился",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "const p = pm.response.json();",
+        "pm.test('own profile with new data', () => {",
+        "  pm.expect(p.id).to.eql(Number(pm.collectionVariables.get('id1')));",
+        "  pm.expect(p.username).to.eql(pm.collectionVariables.get('user1'));",
+        "  pm.expect(p.firstName).to.eql(pm.collectionVariables.get('newFirstName'));",
+        "});"
+      ] } }],
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/profile", "header": [{ "key": "Authorization", "value": "Bearer {{token1}}" }] }
+    },
+    {
+      "name": "7. Регистрация пользователя 2",
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "pm.collectionVariables.set('user2', pm.variables.replaceIn('{{$randomUserName}}') + Date.now());",
+          "pm.collectionVariables.set('pass2', pm.variables.replaceIn('{{$randomPassword}}'));"
+        ] } },
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('status 201', () => pm.response.to.have.status(201));",
+          "pm.collectionVariables.set('id2', pm.response.json().id);"
+        ] } }
+      ],
+      "request": {
+        "method": "POST", "url": "http://{{baseUrl}}/register",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{user2}}\",\n  \"password\": \"{{pass2}}\",\n  \"firstName\": \"{{$randomFirstName}}\",\n  \"lastName\": \"{{$randomLastName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phone\": \"+7{{$randomPhoneNumber}}\"\n}" }
+      }
+    },
+    {
+      "name": "8. Вход пользователя 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.collectionVariables.set('token2', pm.response.json().token);"
+      ] } }],
+      "request": {
+        "method": "POST", "url": "http://{{baseUrl}}/login",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"username\": \"{{user2}}\", \"password\": \"{{pass2}}\"}" }
+      }
+    },
+    {
+      "name": "9. Пользователь 2 видит только свой профиль",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "const p = pm.response.json();",
+        "pm.test('profile of user 2, not user 1', () => {",
+        "  pm.expect(p.id).to.eql(Number(pm.collectionVariables.get('id2')));",
+        "  pm.expect(p.username).to.eql(pm.collectionVariables.get('user2'));",
+        "  pm.expect(p.username).to.not.eql(pm.collectionVariables.get('user1'));",
+        "});"
+      ] } }],
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/profile", "header": [{ "key": "Authorization", "value": "Bearer {{token2}}" }] }
+    },
+    {
+      "name": "10. Пользователь 2 не может изменить профиль пользователя 1 (меняется только свой)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('update applied to user 2 only', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('id2'))));"
+      ] } }],
+      "request": {
+        "method": "PUT", "url": "http://{{baseUrl}}/profile",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token2}}" }],
+        "body": { "mode": "raw", "raw": "{\"firstName\": \"Intruder\", \"lastName\": \"Two\", \"email\": \"two@example.com\", \"phone\": \"+70000000002\"}" }
+      }
+    },
+    {
+      "name": "11. Профиль пользователя 1 не изменился",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "const p = pm.response.json();",
+        "pm.test('user 1 data untouched', () => {",
+        "  pm.expect(p.id).to.eql(Number(pm.collectionVariables.get('id1')));",
+        "  pm.expect(p.firstName).to.eql(pm.collectionVariables.get('newFirstName'));",
+        "  pm.expect(p.firstName).to.not.eql('Intruder');",
+        "});"
+      ] } }],
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/profile", "header": [{ "key": "Authorization", "value": "Bearer {{token1}}" }] }
+    },
+    {
+      "name": "12. Подделанный заголовок X-User-Id без токена не даёт доступ",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 401', () => pm.response.to.have.status(401));"
+      ] } }],
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/profile", "header": [{ "key": "X-User-Id", "value": "{{id1}}" }] }
+    }
+  ]
+}

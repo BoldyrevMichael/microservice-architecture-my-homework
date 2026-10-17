@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "user-service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "user-service.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      # ждать порт базы, чтобы JVM стартовала один раз, а не падала с перезапусками
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.37
+          command: ["sh", "-c", "until nc -z {{ .Values.db.host }} {{ .Values.db.port }}; do sleep 2; done"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+      containers:
+        - name: user-service
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            {{- include "user-service.dbEnv" . | nindent 12 }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-jwt
+                  key: secret
+          # старт JVM с Hibernate занимает до минуты, до его конца liveness не работает
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

@@ -1,0 +1,247 @@
+newman
+
+hw6 user-service: регистрация, вход, профиль
+
+→ 1. Регистрация пользователя 1
+  POST http://arch.homework/register  
+  201 Created ★ 344ms time ★ 480B↑ 454B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 193B
+  │ {
+  │   "username": "Jordy.Monahan831792264218599",
+  │   "password": "EsXWPdubi6b2LlI",
+  │   "firstName": "Cleta",
+  │   "lastName": "D'Amore",
+  │   "email": "Deondre39@gmail.com",
+  │   "phone": "+7200-528-7501"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 146B
+  │ {"id":4,"username":"Jordy.Monahan831792264218599","fir
+  │ stName":"Cleta","lastName":"D'Amore","email":"Deondre3
+  │ 9@gmail.com","phone":"+7200-528-7501"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  76ms      12ms   1ms          850µs           307ms            20ms       705µs     420ms 
+
+  ✓  status 201
+  ✓  id assigned, no password in response
+
+→ 2. Профиль без входа недоступен
+  GET http://arch.homework/profile  
+  401 Unauthorized ★ 20ms time ★ 232B↑ 308B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ text/html ★ text ★ html ★ utf8 ★ 172B
+  │ <html>
+  │ <head><title>401 Authorization Required</title></head>
+  │ <body>
+  │ <center><h1>401 Authorization Required</h1></center>
+  │ <hr><center>nginx</center>
+  │ </body>
+  │ </html>
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       1ms    (cache)      (cache)         12ms             5ms        129µs     22ms  
+
+  ✓  status 401
+
+→ 3. Изменение профиля без входа недоступно
+  PUT http://arch.homework/profile  
+  401 Unauthorized ★ 14ms time ★ 307B↑ 308B↓ size ★ 9↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 23B
+  │ {"firstName": "Hacker"}
+  └ 
+  ┌ ↓ text/html ★ text ★ html ★ utf8 ★ 172B
+  │ <html>
+  │ <head><title>401 Authorization Required</title></head>
+  │ <body>
+  │ <center><h1>401 Authorization Required</h1></center>
+  │ <hr><center>nginx</center>
+  │ </body>
+  │ </html>
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       391µs   (cache)      (cache)         10ms             2ms        86µs      15ms  
+
+  ✓  status 401
+
+→ 4. Вход пользователя 1
+  POST http://arch.homework/login  
+  200 OK ★ 129ms time ★ 358B↑ 513B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 75B
+  │ {"username": "Jordy.Monahan831792264218599", "password
+  │ ": "EsXWPdubi6b2LlI"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 210B
+  │ {"token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0IiwiZXhwIjo
+  │ xNzkyMjY3ODE5LCJpYXQiOjE3OTIyNjQyMTksInVzZXJuYW1lIjoiS
+  │ m9yZHkuTW9uYWhhbjgzMTc5MjI2NDIxODU5OSJ9.P99sIsX1kMiuWY
+  │ 9We301_pN9x2_m5V7AGT7HVjX80ac","expiresIn":3600}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       400µs   (cache)      (cache)         124ms            3ms        83µs      131ms 
+
+  ✓  status 200
+  ✓  token issued
+
+→ 5. Изменение профиля пользователя 1
+  PUT http://arch.homework/profile  
+  200 OK ★ 43ms time ★ 610B↑ 455B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 120B
+  │ {
+  │   "firstName": "Webster",
+  │   "lastName": "Turcotte",
+  │   "email": "Veda_Kunze66@gmail.com",
+  │   "phone": "+7591-232-8479"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 152B
+  │ {"id":4,"username":"Jordy.Monahan831792264218599","fir
+  │ stName":"Webster","lastName":"Turcotte","email":"Veda_
+  │ Kunze66@gmail.com","phone":"+7591-232-8479"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       460µs   (cache)      (cache)         37ms             4ms        129µs     45ms  
+
+  ✓  status 200
+  ✓  firstName updated
+
+→ 6. Профиль пользователя 1 изменился
+  GET http://arch.homework/profile  
+  200 OK ★ 33ms time ★ 437B↑ 455B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 152B
+  │ {"id":4,"username":"Jordy.Monahan831792264218599","fir
+  │ stName":"Webster","lastName":"Turcotte","email":"Veda_
+  │ Kunze66@gmail.com","phone":"+7591-232-8479"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       657µs   (cache)      (cache)         29ms             3ms        93µs      35ms  
+
+  ✓  status 200
+  ✓  own profile with new data
+
+→ 7. Регистрация пользователя 2
+  POST http://arch.homework/register  
+  201 Created ★ 115ms time ★ 486B↑ 460B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 199B
+  │ {
+  │   "username": "Cristina.Stark341792264219524",
+  │   "password": "nWlYNfkM5kwT0_P",
+  │   "firstName": "Delpha",
+  │   "lastName": "Zulauf",
+  │   "email": "Brooks.Watsica@gmail.com",
+  │   "phone": "+7431-511-9052"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 152B
+  │ {"id":5,"username":"Cristina.Stark341792264219524","fi
+  │ rstName":"Delpha","lastName":"Zulauf","email":"Brooks.
+  │ Watsica@gmail.com","phone":"+7431-511-9052"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       495µs   (cache)      (cache)         110ms            3ms        100µs     117ms 
+
+  ✓  status 201
+
+→ 8. Вход пользователя 2
+  POST http://arch.homework/login  
+  200 OK ★ 123ms time ★ 359B↑ 515B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 76B
+  │ {"username": "Cristina.Stark341792264219524", "passwor
+  │ d": "nWlYNfkM5kwT0_P"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 212B
+  │ {"token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI1IiwiZXhwIjo
+  │ xNzkyMjY3ODE5LCJpYXQiOjE3OTIyNjQyMTksInVzZXJuYW1lIjoiQ
+  │ 3Jpc3RpbmEuU3RhcmszNDE3OTIyNjQyMTk1MjQifQ.7m7pyr6cTsu5
+  │ iNlGsXTh9jWBNALV0h-rE9yZ4lBa74s","expiresIn":3600}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       554µs   (cache)      (cache)         117ms            4ms        135µs     126ms 
+
+  ✓  status 200
+
+→ 9. Пользователь 2 видит только свой профиль
+  GET http://arch.homework/profile  
+  200 OK ★ 45ms time ★ 439B↑ 455B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 152B
+  │ {"id":5,"username":"Cristina.Stark341792264219524","fi
+  │ rstName":"Delpha","lastName":"Zulauf","email":"Brooks.
+  │ Watsica@gmail.com","phone":"+7431-511-9052"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       554µs   (cache)      (cache)         40ms             2ms        71µs      47ms  
+
+  ✓  status 200
+  ✓  profile of user 2, not user 1
+
+→ 10. Пользователь 2 не может изменить профиль пользователя 1 (меняется только свой)
+  PUT http://arch.homework/profile  
+  200 OK ★ 56ms time ★ 588B↑ 443B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 97B
+  │ {"firstName": "Intruder", "lastName": "Two", "email": 
+  │ "two@example.com", "phone": "+70000000002"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 140B
+  │ {"id":5,"username":"Cristina.Stark341792264219524","fi
+  │ rstName":"Intruder","lastName":"Two","email":"two@exam
+  │ ple.com","phone":"+70000000002"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       691µs   (cache)      (cache)         51ms             2ms        127µs     57ms  
+
+  ✓  status 200
+  ✓  update applied to user 2 only
+
+→ 11. Профиль пользователя 1 не изменился
+  GET http://arch.homework/profile  
+  200 OK ★ 29ms time ★ 437B↑ 455B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 152B
+  │ {"id":4,"username":"Jordy.Monahan831792264218599","fir
+  │ stName":"Webster","lastName":"Turcotte","email":"Veda_
+  │ Kunze66@gmail.com","phone":"+7591-232-8479"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       558µs   (cache)      (cache)         25ms             2ms        295µs     30ms  
+
+  ✓  status 200
+  ✓  user 1 data untouched
+
+→ 12. Подделанный заголовок X-User-Id без токена не даёт доступ
+  GET http://arch.homework/profile  
+  401 Unauthorized ★ 14ms time ★ 246B↑ 308B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ text/html ★ text ★ html ★ utf8 ★ 172B
+  │ <html>
+  │ <head><title>401 Authorization Required</title></head>
+  │ <body>
+  │ <center><h1>401 Authorization Required</h1></center>
+  │ <hr><center>nginx</center>
+  │ </body>
+  │ </html>
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       390µs   (cache)      (cache)         10ms             2ms        99µs      15ms  
+
+  ✓  status 401
+
+┌─────────────────────────┬────────────────────┬────────────────────┐
+│                         │           executed │             failed │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│              iterations │                  1 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│                requests │                 12 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│            test-scripts │                 12 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│      prerequest-scripts │                  3 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│              assertions │                 19 │                  0 │
+├─────────────────────────┴────────────────────┴────────────────────┤
+│ total run duration: 1512ms                                        │
+├───────────────────────────────────────────────────────────────────┤
+│ total data received: 1.98kB (approx)                              │
+├───────────────────────────────────────────────────────────────────┤
+│ average response time: 80ms [min: 14ms, max: 344ms, s.d.: 89ms]   │
+├───────────────────────────────────────────────────────────────────┤
+│ average DNS lookup time: 1ms [min: 1ms, max: 1ms, s.d.: 0µs]      │
+├───────────────────────────────────────────────────────────────────┤
+│ average first byte time: 73ms [min: 10ms, max: 307ms, s.d.: 81ms] │
+└───────────────────────────────────────────────────────────────────┘

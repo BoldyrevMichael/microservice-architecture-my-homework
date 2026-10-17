@@ -1,0 +1,39 @@
+@startuml
+title Регистрация, вход и доступ к профилю через API gateway
+
+actor Клиент as client
+participant "ingress-nginx\n(API gateway)" as gw
+participant "user-service" as svc
+database "PostgreSQL" as db
+
+== Регистрация ==
+client -> gw: POST /register {username, password, ...}
+gw -> svc: POST /register
+svc -> db: INSERT users (password_hash = bcrypt)
+svc --> gw: 201 {id, username, ...}
+gw --> client: 201 {id, username, ...}
+
+== Вход ==
+client -> gw: POST /login {username, password}
+gw -> svc: POST /login
+svc -> db: SELECT by username
+svc -> svc: сверка bcrypt, выпуск JWT (HS256, sub = id, 1 ч)
+svc --> gw: 200 {token, expiresIn}
+gw --> client: 200 {token, expiresIn}
+
+== Профиль (защищённый путь) ==
+client -> gw: GET /profile\nAuthorization: Bearer <token>
+gw -> svc: GET /auth/verify\nAuthorization: Bearer <token>
+svc -> svc: проверка подписи и срока
+svc --> gw: 204, X-User-Id: <id>
+gw -> svc: GET /profile\nX-User-Id: <id>
+svc -> db: SELECT by id
+svc --> gw: 200 {профиль}
+gw --> client: 200 {профиль}
+
+== Без токена ==
+client -> gw: GET /profile
+gw -> svc: GET /auth/verify
+svc --> gw: 401
+gw --> client: 401
+@enduml
