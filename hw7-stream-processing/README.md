@@ -22,7 +22,7 @@
 price}`, `order.payment {orderId, userId, price, status: COMPLETED | FAILED, reason}`. Ключ
 сообщения — идентификатор пользователя или заказа.
 
-Аутентификация как в hw6: `POST /login` выдаёт JWT, ingress-nginx на пути `/profile`,
+Аутентификация: `POST /login` выдаёт JWT, ingress-nginx на пути `/profile`,
 `/billing`, `/orders`, `/notifications` вызывает `/auth/verify` и подставляет `X-User-Id`,
 сервисы работают только с данными этого пользователя. По условию задания сбои сервисов не
 рассматриваются: события публикуются сразу после записи в базу, без outbox и повторов.
@@ -48,6 +48,8 @@ price}`, `order.payment {orderId, userId, price, status: COMPLETED | FAILED, rea
   `controller`, `service`, `repository`, `entity`, `dto`, `event` (записи событий, слушатели
   `@KafkaListener`, издатели через `KafkaTemplate`), миграции Flyway, тесты, Dockerfile.
   Образы `boldyrevma/<имя>:hw7`.
+- `helm/service/` — общий чарт сервиса (ConfigMap, Job миграций, Deployment, Service), `helm/values/<имя>.yaml` —
+  значения каждого из четырёх сервисов: образ, база, секреты.
 - `k8s/` — манифесты в порядке применения: namespace, Secret базы и ключа JWT, базы
   (`Database` CloudNativePG), темы Kafka, по файлу на сервис (ConfigMap, Job миграций,
   Deployment, Service), два Ingress: открытый и с проверкой токена.
@@ -112,14 +114,35 @@ kubectl -n msa wait cluster/msa-db --for=condition=Ready --timeout=300s
 kubectl -n msa wait kafka/msa-kafka --for=condition=Ready --timeout=600s
 ```
 
-Сервисы. Одна команда применяет всё по порядку номеров: базы, темы, миграции, приложения,
-Ingress; Job и поды дожидаются базы через initContainer:
+Сервисы, путь 1: манифестами. Одна команда применяет всё по порядку номеров: базы, темы,
+миграции, приложения, Ingress; Job и поды дожидаются базы через initContainer:
 
 ```bash
 kubectl apply -f k8s/
 kubectl -n msa wait job --all --for=condition=complete --timeout=300s
 kubectl -n msa rollout status deployment --timeout=300s
 ```
+
+Сервисы, путь 2: общим чартом. Чарт `helm/service` описывает ConfigMap, Job миграций,
+Deployment и Service, различия между сервисами (образ, база, секреты) лежат в
+`helm/values/<имя>.yaml`, имя релиза становится именем сервиса, на него ссылаются Ingress.
+Базы, темы и Ingress остаются манифестами, чарт ставится четыре раза:
+
+```bash
+kubectl apply -f k8s/02-databases.yaml -f k8s/03-kafka-topics.yaml
+helm install user-service helm/service --namespace msa -f helm/values/user-service.yaml
+helm install billing-service helm/service --namespace msa -f helm/values/billing-service.yaml
+helm install order-service helm/service --namespace msa -f helm/values/order-service.yaml
+helm install notification-service helm/service --namespace msa -f helm/values/notification-service.yaml
+kubectl apply -f k8s/40-ingress.yaml -f k8s/41-ingress-auth.yaml
+kubectl -n msa wait job --all --for=condition=complete --timeout=300s
+kubectl -n msa rollout status deployment --timeout=300s
+```
+
+Один чарт вместо четырёх копий: шаблоны одни, различается только values. В продуктовой
+раскладке такие шаблоны выносят в library-чарт, а чарт каждого сервиса держат рядом с его
+кодом; здесь это был бы лишний слой. Обновление сервиса — `helm upgrade` с новым тегом
+образа, Job миграций создаётся заново с номером ревизии.
 
 ## Проверка
 
@@ -141,14 +164,24 @@ kubectl -n msa run kafka-cli --rm -it --restart=Never --image=quay.io/strimzi/ka
 
 ## Удаление
 
+Темы Kafka удаляются первыми, пока жив topic operator: у `KafkaTopic` стоит его финализатор, и
+если удалить namespace целиком, темы останутся висеть и не дадут namespace исчезнуть.
+
 ```bash
-kubectl delete -f k8s/                       # приложения, темы, базы, namespace msa с томом PostgreSQL
-helm uninstall msa-db --namespace msa 2>/dev/null || true
+kubectl delete -f k8s/03-kafka-topics.yaml
+helm uninstall user-service billing-service order-service notification-service -n msa   # только при установке чартом
+helm uninstall msa-db --namespace msa
+kubectl delete -f k8s/                       # приложения, базы, Kafka, namespace msa с томами
 helm uninstall strimzi --namespace kafka && kubectl delete namespace kafka
 helm uninstall cnpg --namespace cnpg-system && kubectl delete namespace cnpg-system
 helm uninstall nginx --namespace m && kubectl delete namespace m
 ```
 
-Удаление namespace `msa` уносит и кластер PostgreSQL, и Kafka, поэтому `helm uninstall
-msa-db` после него уже не находит релиз — это ожидаемо. Образы: `docker rmi
-boldyrevma/<имя>:hw7`, теги в Docker Hub удаляются на странице репозитория.
+Релиз базы снимается до удаления namespace: вместе с namespace исчезает и запись helm о
+релизе. Образы: `docker rmi boldyrevma/<имя>:hw7`, теги в Docker Hub удаляются на странице
+репозитория.
+
+Если после удаления namespace `msa` ставить приложение заново, не переустанавливая Strimzi,
+сначала повторите `helm upgrade strimzi ...` с теми же параметрами: оператор держит свои
+права (RoleBinding) внутри наблюдаемого namespace, они исчезают вместе с ним, и без этого
+шага Kafka в новом `msa` не создастся.
