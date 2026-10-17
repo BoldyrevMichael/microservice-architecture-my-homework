@@ -1,0 +1,27 @@
+@startuml
+title hw7: сервисы и потоки событий
+skinparam componentStyle rectangle
+actor Клиент
+rectangle "ingress-nginx\n(auth-url → user-service)" as gw
+rectangle "user-service\n/register /login /profile" as u
+rectangle "billing-service\n/billing/account" as b
+rectangle "order-service\n/orders" as o
+rectangle "notification-service\n/notifications" as n
+queue "Kafka (Strimzi)\nuser.registered\norder.created\norder.payment" as k
+database "PostgreSQL (CNPG)\nusers | billing | orders | notifications" as db
+Клиент --> gw
+gw --> u
+gw --> b
+gw --> o
+gw --> n
+u --> k : user.registered
+o --> k : order.created
+b --> k : order.payment
+k --> b : user.registered\norder.created
+k --> o : order.payment
+k --> n : user.registered\norder.payment
+u --> db
+b --> db
+o --> db
+n --> db
+@enduml

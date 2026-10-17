@@ -1,0 +1,38 @@
+@startuml
+title Вариант 3. Event Collaboration (реализован)
+actor Клиент as c
+participant "user-service" as u
+queue "Kafka" as k
+participant "billing-service" as b
+participant "order-service" as o
+participant "notification-service" as n
+
+== Регистрация ==
+c -> u: POST /register
+u -> k: user.registered {userId, username, email}
+k -> b: user.registered
+b -> b: создать счёт с балансом 0
+k -> n: user.registered
+n -> n: запомнить email получателя
+
+== Пополнение ==
+c -> b: POST /billing/account/deposit {amount}\n(X-User-Id от шлюза)
+b --> c: 200 {balance}
+
+== Заказ ==
+c -> o: POST /orders {price}
+o -> o: заказ NEW
+o -> k: order.created {orderId, userId, price}
+o --> c: 201 {status: NEW}
+k -> b: order.created
+b -> b: списать или отказать
+b -> k: order.payment {orderId, userId, price,\nstatus: COMPLETED | FAILED, reason}
+k -> o: order.payment
+o -> o: PAID | REJECTED
+k -> n: order.payment
+n -> n: письмо счастья | письмо горя
+c -> o: GET /orders/{id}
+o --> c: 200 {status: PAID | REJECTED}
+c -> n: GET /notifications
+n --> c: 200 [письма]
+@enduml
