@@ -7,8 +7,8 @@ COPY src src
 RUN --mount=type=cache,target=/root/.gradle chmod +x gradlew && ./gradlew --no-daemon -q bootJar
 
 FROM eclipse-temurin:25-jre-alpine
-RUN addgroup -S -g 1000 app && adduser -S -u 1000 -G app app
-USER 1000:1000
+RUN addgroup -S -g 10001 app && adduser -S -u 10001 -G app app
+USER 10001:10001
 WORKDIR /app
 COPY --from=build /src/build/libs/health-service-*.jar app.jar
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
