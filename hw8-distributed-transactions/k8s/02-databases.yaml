@@ -1,0 +1,55 @@
+# базы остальных сервисов в том же кластере msa-db (база users создаётся при инициализации)
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: billing
+  namespace: msa
+spec:
+  cluster:
+    name: msa-db
+  name: billing
+  owner: app
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: orders
+  namespace: msa
+spec:
+  cluster:
+    name: msa-db
+  name: orders
+  owner: app
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: notifications
+  namespace: msa
+spec:
+  cluster:
+    name: msa-db
+  name: notifications
+  owner: app
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: warehouse
+  namespace: msa
+spec:
+  cluster:
+    name: msa-db
+  name: warehouse
+  owner: app
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: delivery
+  namespace: msa
+spec:
+  cluster:
+    name: msa-db
+  name: delivery
+  owner: app

@@ -1,0 +1,250 @@
+{
+  "info": {
+    "name": "hw8 сага заказа: биллинг, склад, доставка",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "arch.homework" },
+    { "key": "username", "value": "" }, { "key": "password", "value": "" },
+    { "key": "token", "value": "" }, { "key": "slot", "value": "" }, { "key": "stockBefore", "value": "" },
+    { "key": "orderOk", "value": "" }, { "key": "orderNoMoney", "value": "" }, { "key": "orderNoStock", "value": "" }, { "key": "orderNoCourier", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Регистрация и вход",
+      "item": [
+        {
+          "name": "Регистрация",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('username', pm.variables.replaceIn('{{$randomUserName}}') + Date.now());",
+              "pm.collectionVariables.set('password', pm.variables.replaceIn('{{$randomPassword}}'));",
+              "// уникальный слот доставки на прогон, чтобы курьер был свободен",
+              "pm.collectionVariables.set('slot', '2026-10-20T' + String(Date.now() % 1000000).padStart(6, '0'));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 201', () => pm.response.to.have.status(201));" ] } }
+          ],
+          "request": {
+            "method": "POST", "url": "http://{{baseUrl}}/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"firstName\": \"{{$randomFirstName}}\",\n  \"lastName\": \"{{$randomLastName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phone\": \"+7{{$randomPhoneNumber}}\"\n}" }
+          }
+        },
+        {
+          "name": "Вход",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.collectionVariables.set('token', pm.response.json().token);"
+          ] } }],
+          "request": {
+            "method": "POST", "url": "http://{{baseUrl}}/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"username\": \"{{username}}\", \"password\": \"{{password}}\"}" }
+          }
+        },
+        {
+          "name": "Пополнение счёта на 100",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "setTimeout(() => {}, 1500);" ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('balance 100', () => pm.expect(Number(pm.response.json().balance)).to.eql(100));"
+            ] } }
+          ],
+          "request": {
+            "method": "POST", "url": "http://{{baseUrl}}/billing/account/deposit",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\"amount\": 100}" }
+          }
+        },
+        {
+          "name": "Остаток товара 1 до заказов",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.collectionVariables.set('stockBefore', pm.response.json().available);"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/warehouse/products/1", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        }
+      ]
+    },
+    {
+      "name": "2. Успешная сага: оплата, резерв товара, резерв курьера",
+      "item": [
+        {
+          "name": "Заказ: 60, товар 1 × 2, свободный слот",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('orderOk', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST", "url": "http://{{baseUrl}}/orders",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\"price\": 60, \"productId\": 1, \"quantity\": 2, \"slot\": \"{{slot}}\"}" }
+          }
+        },
+        {
+          "name": "Заказ CONFIRMED",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "setTimeout(() => {}, 3000);" ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('CONFIRMED', () => pm.expect(pm.response.json().status).to.eql('CONFIRMED'));"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/orders/{{orderOk}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Баланс 40",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('balance 40', () => pm.expect(Number(pm.response.json().balance)).to.eql(40));"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/billing/account", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Остаток товара 1 уменьшился на 2",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('stock -2', () => pm.expect(pm.response.json().available).to.eql(Number(pm.collectionVariables.get('stockBefore')) - 2));"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/warehouse/products/1", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Курьер зарезервирован на слот",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('reservation for order', () => {",
+            "  const r = pm.response.json();",
+            "  pm.expect(r.length).to.eql(1);",
+            "  pm.expect(r[0].orderId).to.eql(Number(pm.collectionVariables.get('orderOk')));",
+            "  pm.expect(r[0].slot).to.eql(pm.collectionVariables.get('slot'));",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/delivery/reservations", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        }
+      ]
+    },
+    {
+      "name": "3. Отказ биллинга: денег не хватает",
+      "item": [
+        {
+          "name": "Заказ: 100 при балансе 40",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('orderNoMoney', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST", "url": "http://{{baseUrl}}/orders",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\"price\": 100, \"productId\": 1, \"quantity\": 1, \"slot\": \"{{slot}}-b\"}" }
+          }
+        },
+        {
+          "name": "Заказ CANCELLED: insufficient funds",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "setTimeout(() => {}, 3000);" ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const o = pm.response.json();",
+              "pm.test('CANCELLED with reason', () => { pm.expect(o.status).to.eql('CANCELLED'); pm.expect(o.reason).to.eql('insufficient funds'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/orders/{{orderNoMoney}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Баланс по-прежнему 40, остаток товара не тронут",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('balance 40', () => pm.expect(Number(pm.response.json().balance)).to.eql(40));"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/billing/account", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        }
+      ]
+    },
+    {
+      "name": "4. Отказ склада: товар закончился, деньги возвращены",
+      "item": [
+        {
+          "name": "Заказ: 10, товар 2 (остаток 0)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('orderNoStock', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST", "url": "http://{{baseUrl}}/orders",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\"price\": 10, \"productId\": 2, \"quantity\": 1, \"slot\": \"{{slot}}-c\"}" }
+          }
+        },
+        {
+          "name": "Заказ CANCELLED: out of stock",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "setTimeout(() => {}, 3000);" ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const o = pm.response.json();",
+              "pm.test('CANCELLED out of stock', () => { pm.expect(o.status).to.eql('CANCELLED'); pm.expect(o.reason).to.include('out of stock'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/orders/{{orderNoStock}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Деньги вернулись: баланс 40",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('refunded to 40', () => pm.expect(Number(pm.response.json().balance)).to.eql(40));"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/billing/account", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        }
+      ]
+    },
+    {
+      "name": "5. Отказ доставки: слот занят, товар и деньги возвращены",
+      "item": [
+        {
+          "name": "Заказ: 10, товар 1 × 1, тот же слот, что у первого заказа",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('orderNoCourier', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST", "url": "http://{{baseUrl}}/orders",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\"price\": 10, \"productId\": 1, \"quantity\": 1, \"slot\": \"{{slot}}\"}" }
+          }
+        },
+        {
+          "name": "Заказ CANCELLED: no courier",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "setTimeout(() => {}, 3000);" ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const o = pm.response.json();",
+              "pm.test('CANCELLED no courier', () => { pm.expect(o.status).to.eql('CANCELLED'); pm.expect(o.reason).to.include('no courier'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/orders/{{orderNoCourier}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Резерв товара снят: остаток как после первого заказа",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('stock released', () => pm.expect(pm.response.json().available).to.eql(Number(pm.collectionVariables.get('stockBefore')) - 2));"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/warehouse/products/1", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Деньги вернулись: баланс 40",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('refunded to 40', () => pm.expect(Number(pm.response.json().balance)).to.eql(40));"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/billing/account", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Письма: одно подтверждение и три отмены",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const list = pm.response.json();",
+            "pm.test('4 letters', () => pm.expect(list.length).to.eql(4));",
+            "pm.test('subjects', () => {",
+            "  const subjects = list.map(m => m.subject);",
+            "  pm.expect(subjects).to.include('Заказ ' + pm.collectionVariables.get('orderOk') + ' подтверждён');",
+            "  pm.expect(subjects.filter(s => s.includes('отменён')).length).to.eql(3);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "http://{{baseUrl}}/notifications", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+# notification-service: настройки, миграции, приложение, сервис
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-service-config
+  namespace: msa
+data:
+  DB_URL: jdbc:postgresql://msa-db-rw:5432/notifications
+  KAFKA_BOOTSTRAP: msa-kafka-kafka-bootstrap:9092
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notification-service-migrate
+  namespace: msa
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      # ждать порт базы, чтобы JVM стартовала один раз
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.37
+          command: ["sh", "-c", "until nc -z msa-db-rw 5432; do sleep 2; done"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+      containers:
+        - name: migrate
+          image: boldyrevma/notification-service:hw8
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: migrate
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: notification-service-config
+                  key: DB_URL
+            - name: KAFKA_BOOTSTRAP
+              valueFrom:
+                configMapKeyRef:
+                  name: notification-service-config
+                  key: KAFKA_BOOTSTRAP
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: msa-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: msa-db-credentials
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: msa
+  labels:
+    app: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      # ждать порт базы, чтобы JVM стартовала один раз
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.37
+          command: ["sh", "-c", "until nc -z msa-db-rw 5432; do sleep 2; done"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+      containers:
+        - name: notification-service
+          image: boldyrevma/notification-service:hw8
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: notification-service-config
+                  key: DB_URL
+            - name: KAFKA_BOOTSTRAP
+              valueFrom:
+                configMapKeyRef:
+                  name: notification-service-config
+                  key: KAFKA_BOOTSTRAP
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: msa-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: msa-db-credentials
+                  key: password
+          # старт JVM занимает до минуты, до его конца liveness не работает
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: msa
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

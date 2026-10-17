@@ -1,0 +1,37 @@
+@startuml
+title hw8: сервисы и темы событий
+skinparam componentStyle rectangle
+actor Клиент
+rectangle "ingress-nginx\n(auth-url → user-service)" as gw
+rectangle "user-service" as u
+rectangle "order-service\n/orders" as o
+rectangle "billing-service\n/billing/account" as b
+rectangle "warehouse-service\n/warehouse/products" as w
+rectangle "delivery-service\n/delivery/reservations" as d
+rectangle "notification-service\n/notifications" as n
+queue "Kafka (Strimzi)\nuser.registered · order.created · order.payment\norder.stock · order.delivery · order.completed" as k
+database "PostgreSQL (CNPG)\nusers · billing · orders · warehouse · delivery · notifications" as db
+Клиент --> gw
+gw --> u
+gw --> o
+gw --> b
+gw --> w
+gw --> d
+gw --> n
+u --> k : user.registered
+o --> k : order.created, order.completed
+b --> k : order.payment
+w --> k : order.stock
+d --> k : order.delivery
+k --> o
+k --> b
+k --> w
+k --> d
+k --> n
+u --> db
+o --> db
+b --> db
+w --> db
+d --> db
+n --> db
+@enduml
