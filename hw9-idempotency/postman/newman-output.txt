@@ -1,0 +1,197 @@
+newman
+
+hw9 идемпотентное создание заказа
+
+→ 1. Регистрация
+  POST http://arch.homework/register  
+  201 Created ★ 166ms time ★ 477B↑ 451B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 190B
+  │ {
+  │   "username": "Kristoffer81792267719582",
+  │   "password": "LI2X5S1jbw7MAGz",
+  │   "firstName": "Annette",
+  │   "lastName": "Lindgren",
+  │   "email": "Talia16@yahoo.com",
+  │   "phone": "+7463-398-9741"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 143B
+  │ {"id":3,"username":"Kristoffer81792267719582","firstNa
+  │ me":"Annette","lastName":"Lindgren","email":"Talia16@y
+  │ ahoo.com","phone":"+7463-398-9741"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  64ms      9ms    1ms          789µs           138ms            16ms       607µs     230ms 
+
+  ✓  status 201
+
+→ 2. Вход
+  POST http://arch.homework/login  
+  200 OK ★ 99ms time ★ 354B↑ 508B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 71B
+  │ {"username": "Kristoffer81792267719582", "password": "
+  │ LI2X5S1jbw7MAGz"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 205B
+  │ {"token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIiwiZXhwIjo
+  │ xNzkyMjcxMzE5LCJpYXQiOjE3OTIyNjc3MTksInVzZXJuYW1lIjoiS
+  │ 3Jpc3RvZmZlcjgxNzkyMjY3NzE5NTgyIn0.COgShd8k5zjtOYHyMO8
+  │ C7CUdd3D2VdLWAygLSdkU3SI","expiresIn":3600}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       1ms    (cache)      (cache)         93ms             4ms        120µs     101ms 
+
+  ✓  status 200
+
+→ 3. Пополнение счёта на 100
+  POST http://arch.homework/billing/account/deposit  
+  200 OK ★ 40ms time ★ 516B↑ 161B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 15B
+  │ {"amount": 100}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 29B
+  │ {"userId":3,"balance":100.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       692µs   (cache)      (cache)         34ms             4ms        197µs     43ms  
+
+  ✓  status 200
+
+→ 4. Заказ без ключа отклоняется
+  POST http://arch.homework/orders  
+  400 Bad Request ★ 24ms time ★ 557B↑ 200B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 73B
+  │ {"price": 30, "productId": 1, "quantity": 1, "slot": "
+  │ 2026-10-21T719583"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 59B
+  │ {"code":400,"message":"Idempotency-Key header is requi
+  │ red"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       494µs   (cache)      (cache)         19ms             3ms        101µs     26ms  
+
+  ✓  status 400
+  ✓  message names the header
+
+→ 5. Заказ с ключом создан
+  POST http://arch.homework/orders  
+  201 Created ★ 41ms time ★ 612B↑ 296B↓ size ★ 11↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 73B
+  │ {"price": 30, "productId": 1, "quantity": 1, "slot": "
+  │ 2026-10-21T719583"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 158B
+  │ {"id":5,"userId":3,"price":30,"productId":1,"quantity"
+  │ :1,"slot":"2026-10-21T719583","status":"NEW","reason":
+  │ null,"createdAt":"2026-10-17T20:08:41.675677402Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       402µs   (cache)      (cache)         36ms             3ms        112µs     43ms  
+
+  ✓  status 201
+
+→ 6. Повтор с тем же ключом и телом: тот же заказ
+  POST http://arch.homework/orders  
+  201 Created ★ 55ms time ★ 612B↑ 301B↓ size ★ 11↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 73B
+  │ {"price": 30, "productId": 1, "quantity": 1, "slot": "
+  │ 2026-10-21T719583"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 163B
+  │ {"id":5,"userId":3,"price":30.00,"productId":1,"quanti
+  │ ty":1,"slot":"2026-10-21T719583","status":"RESERVED","
+  │ reason":null,"createdAt":"2026-10-17T20:08:41.675677Z"
+  │ }
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       445µs   (cache)      (cache)         50ms             3ms        272µs     57ms  
+
+  ✓  status 201
+  ✓  same order id
+
+→ 7. Повтор с тем же ключом и другим телом: 422
+  POST http://arch.homework/orders  
+  422 Unprocessable Entity (WebDAV) (RFC 4918) ★ 27ms time ★ 612B↑ 290B↓ size ★ 11↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 73B
+  │ {"price": 99, "productId": 1, "quantity": 1, "slot": "
+  │ 2026-10-21T719583"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 119B
+  │ {"code":422,"message":"idempotency key 4a343541-818e-4
+  │ 688-9a80-63b5967566e9 was already used with a differen
+  │ t request"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       369µs   (cache)      (cache)         23ms             2ms        81µs      28ms  
+
+  ✓  status 422
+
+→ 8. Заказ один, списание одно: баланс 70
+  GET http://arch.homework/orders  
+  200 OK ★ 33ms time ★ 431B↑ 299B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 166B
+  │ [{"id":5,"userId":3,"price":30.00,"productId":1,"quant
+  │ ity":1,"slot":"2026-10-21T719583","status":"CONFIRMED"
+  │ ,"reason":null,"createdAt":"2026-10-17T20:08:41.675677
+  │ Z"}]
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       496µs   (cache)      (cache)         28ms             4ms        136µs     36ms  
+
+  ✓  status 200
+  ✓  exactly one order
+  ✓  order CONFIRMED
+
+→ 9. Баланс 70
+  GET http://arch.homework/billing/account  
+  200 OK ★ 30ms time ★ 440B↑ 160B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"userId":3,"balance":70.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       517µs   (cache)      (cache)         25ms             3ms        101µs     32ms  
+
+  ✓  balance 70
+
+→ 10. Новый ключ — новый заказ
+  POST http://arch.homework/orders  
+  201 Created ★ 62ms time ★ 614B↑ 298B↓ size ★ 11↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 75B
+  │ {"price": 30, "productId": 1, "quantity": 1, "slot": "
+  │ 2026-10-21T719583-2"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 160B
+  │ {"id":6,"userId":3,"price":30,"productId":1,"quantity"
+  │ :1,"slot":"2026-10-21T719583-2","status":"NEW","reason
+  │ ":null,"createdAt":"2026-10-17T20:08:48.048820819Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       775µs   (cache)      (cache)         57ms             3ms        103µs     64ms  
+
+  ✓  status 201
+  ✓  different order id
+
+┌─────────────────────────┬────────────────────┬────────────────────┐
+│                         │           executed │             failed │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│              iterations │                  1 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│                requests │                 10 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│            test-scripts │                 10 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│      prerequest-scripts │                  3 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│              assertions │                 15 │                  0 │
+├─────────────────────────┴────────────────────┴────────────────────┤
+│ total run duration: 8.5s                                          │
+├───────────────────────────────────────────────────────────────────┤
+│ total data received: 1.23kB (approx)                              │
+├───────────────────────────────────────────────────────────────────┤
+│ average response time: 57ms [min: 24ms, max: 166ms, s.d.: 41ms]   │
+├───────────────────────────────────────────────────────────────────┤
+│ average DNS lookup time: 1ms [min: 1ms, max: 1ms, s.d.: 0µs]      │
+├───────────────────────────────────────────────────────────────────┤
+│ average first byte time: 50ms [min: 19ms, max: 138ms, s.d.: 35ms] │
+└───────────────────────────────────────────────────────────────────┘

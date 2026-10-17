@@ -1,0 +1,388 @@
+{
+  "info": {
+    "name": "hw9 идемпотентное создание заказа",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "arch.homework"
+    },
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "key",
+      "value": ""
+    },
+    {
+      "key": "slot",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Регистрация",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('username', pm.variables.replaceIn('{{$randomUserName}}') + Date.now());",
+              "pm.collectionVariables.set('password', pm.variables.replaceIn('{{$randomPassword}}'));",
+              "pm.collectionVariables.set('key', pm.variables.replaceIn('{{$guid}}'));",
+              "pm.collectionVariables.set('slot', '2026-10-21T' + String(Date.now() % 1000000).padStart(6, '0'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"firstName\": \"{{$randomFirstName}}\",\n  \"lastName\": \"{{$randomLastName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phone\": \"+7{{$randomPhoneNumber}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Вход",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('token', pm.response.json().token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"{{username}}\", \"password\": \"{{password}}\"}"
+        }
+      }
+    },
+    {
+      "name": "3. Пополнение счёта на 100",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(() => {}, 1500);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/billing/account/deposit",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amount\": 100}"
+        }
+      }
+    },
+    {
+      "name": "4. Заказ без ключа отклоняется",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 400', () => pm.response.to.have.status(400));",
+              "pm.test('message names the header', () => pm.expect(pm.response.json().message).to.include('Idempotency-Key'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/orders",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 30, \"productId\": 1, \"quantity\": 1, \"slot\": \"{{slot}}\"}"
+        }
+      }
+    },
+    {
+      "name": "5. Заказ с ключом создан",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('orderId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/orders",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 30, \"productId\": 1, \"quantity\": 1, \"slot\": \"{{slot}}\"}"
+        }
+      }
+    },
+    {
+      "name": "6. Повтор с тем же ключом и телом: тот же заказ",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));",
+              "pm.test('same order id', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('orderId'))));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/orders",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 30, \"productId\": 1, \"quantity\": 1, \"slot\": \"{{slot}}\"}"
+        }
+      }
+    },
+    {
+      "name": "7. Повтор с тем же ключом и другим телом: 422",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/orders",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 99, \"productId\": 1, \"quantity\": 1, \"slot\": \"{{slot}}\"}"
+        }
+      }
+    },
+    {
+      "name": "8. Заказ один, списание одно: баланс 70",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// сага из трёх шагов идёт через Kafka, даём ей время",
+              "setTimeout(() => {}, 6000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('exactly one order', () => pm.expect(pm.response.json().length).to.eql(1));",
+              "pm.test('order CONFIRMED', () => pm.expect(pm.response.json()[0].status).to.eql('CONFIRMED'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "http://{{baseUrl}}/orders",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "9. Баланс 70",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('balance 70', () => pm.expect(Number(pm.response.json().balance)).to.eql(70));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "http://{{baseUrl}}/billing/account",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "10. Новый ключ — новый заказ",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));",
+              "pm.test('different order id', () => pm.expect(pm.response.json().id).to.not.eql(Number(pm.collectionVariables.get('orderId'))));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/orders",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 30, \"productId\": 1, \"quantity\": 1, \"slot\": \"{{slot}}-2\"}"
+        }
+      }
+    }
+  ]
+}

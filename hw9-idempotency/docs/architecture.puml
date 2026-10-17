@@ -1,0 +1,48 @@
+@startuml
+title hw9: сервисы и темы событий
+skinparam componentStyle rectangle
+skinparam linetype polyline
+skinparam nodesep 40
+skinparam ranksep 70
+actor Клиент as client
+rectangle "ingress-nginx (API gateway)\nпроверка токена: auth-url → user-service" as gw
+rectangle "user-service" as u
+rectangle "order-service\n/orders" as o
+rectangle "billing-service\n/billing/account" as b
+rectangle "warehouse-service\n/warehouse/products" as w
+rectangle "delivery-service\n/delivery/reservations" as d
+rectangle "notification-service\n/notifications" as n
+queue "Kafka (Strimzi)\nuser.registered · order.created · order.payment\norder.stock · order.delivery · order.completed" as k
+database "PostgreSQL (CNPG)\nusers · billing · orders · warehouse · delivery · notifications" as db
+
+client -down-> gw
+gw -down-> u : /register /login /profile
+gw -down-> o : /orders
+gw -down-> b : /billing
+gw -down-> w : /warehouse
+gw -down-> d : /delivery
+gw -down-> n : /notifications
+
+k -[hidden]right-> db
+
+u -down-> k
+o -down-> k
+b -down-> k
+w -down-> k
+d -down-> k
+k -up-> o
+k -up-> b
+k -up-> w
+k -up-> d
+k -up-> n
+
+u -down-> db
+o -down-> db
+b -down-> db
+w -down-> db
+d -down-> db
+n -down-> db
+legend right
+стрелка в Kafka — сервис публикует, из Kafka — слушает
+endlegend
+@enduml

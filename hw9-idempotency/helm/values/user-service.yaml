@@ -1,0 +1,8 @@
+image:
+  repository: boldyrevma/user-service
+env:
+  DB_URL: jdbc:postgresql://msa-db-rw:5432/users
+envFromSecret:
+  JWT_SECRET:
+    secret: user-service-jwt
+    key: secret
