@@ -1,0 +1,29 @@
+{{- if .Values.migration.enabled }}
+# Job неизменяема, поэтому на каждую ревизию релиза создаётся новая
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "service.name" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 10
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.runAsUser }}
+        runAsGroup: {{ .Values.runAsUser }}
+      {{- include "service.initContainers" . | nindent 6 }}
+      containers:
+        - name: migrate
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: migrate
+            {{- include "service.env" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}
