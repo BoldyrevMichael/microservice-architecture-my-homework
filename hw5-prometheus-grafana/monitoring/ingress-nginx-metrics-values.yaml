@@ -1,0 +1,6 @@
+# дополнение к ingress-nginx/values.yaml: метрики контроллера и ServiceMonitor для Prometheus
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true

@@ -1,0 +1,55 @@
+# первоначальные миграции Flyway: тот же образ, профиль migrate (без веб-сервера)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: user-service-migrate
+  namespace: msa
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      # ждать порт базы, чтобы JVM стартовала один раз, а не падала с перезапусками
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.37
+          command: ["sh", "-c", "until nc -z user-db-rw 5432; do sleep 2; done"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+      containers:
+        - name: migrate
+          image: boldyrevma/user-service:hw5
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: migrate
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: user-service-config
+                  key: DB_URL
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: user-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: user-db-credentials
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi

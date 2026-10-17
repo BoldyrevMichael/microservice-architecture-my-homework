@@ -1,0 +1,90 @@
+# kube-prometheus-stack для учебного кластера: Prometheus, Grafana, kube-state-metrics,
+# node-exporter; Alertmanager не нужен — алерты настраиваются в Grafana
+alertmanager:
+  enabled: false
+
+# компоненты control plane в kind/minikube недоступны для скрейпа, цели только шумят
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    # подхватывать ServiceMonitor/PodMonitor из всех namespace, а не только свои
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
+
+grafana:
+  adminPassword: grafana-hw5
+  grafana.ini:
+    auth.anonymous:
+      enabled: true
+      org_role: Viewer
+  # дашборды и алерты подхватываются из ConfigMap с метками grafana_dashboard / grafana_alert
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+    alerts:
+      enabled: true
+      searchNamespace: ALL
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # серверный рендер панелей в PNG (скриншоты дашборда через /render/...)
+  imageRenderer:
+    enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
