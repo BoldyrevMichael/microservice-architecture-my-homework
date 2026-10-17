@@ -1,0 +1,15 @@
+@startuml
+title Вариант 2. HTTP для оплаты, события для уведомлений
+actor Клиент as c
+participant "order-service" as o
+participant "billing-service" as b
+queue "Kafka\norder.payment" as k
+participant "notification-service" as n
+c -> o: POST /orders {price}
+o -> b: POST /billing/accounts/{userId}/withdraw {amount}
+b --> o: 200 или 409
+o -> k: OrderPaid | OrderRejected {orderId, userId, price, reason}
+o --> c: 201 {status: PAID | REJECTED}
+k -> n: OrderPaid | OrderRejected
+n -> n: сохранить письмо
+@enduml

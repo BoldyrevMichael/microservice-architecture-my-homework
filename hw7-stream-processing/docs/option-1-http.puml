@@ -1,0 +1,20 @@
+@startuml
+title Вариант 1. Только синхронный HTTP
+actor Клиент as c
+participant "order-service" as o
+participant "billing-service" as b
+participant "notification-service" as n
+c -> o: POST /orders {price}
+o -> b: POST /billing/accounts/{userId}/withdraw {amount}
+alt денег хватает
+  b --> o: 200 {balance}
+  o -> n: POST /notifications {userId, subject: оплачен}
+  n --> o: 201
+  o --> c: 201 {status: PAID}
+else денег не хватает
+  b --> o: 409 insufficient funds
+  o -> n: POST /notifications {userId, subject: отклонён}
+  n --> o: 201
+  o --> c: 201 {status: REJECTED}
+end
+@enduml

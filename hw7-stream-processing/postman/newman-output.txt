@@ -1,0 +1,210 @@
+newman
+
+hw7 заказ: пользователь, биллинг, заказ, уведомления
+
+→ 1. Регистрация пользователя (создаёт счёт в биллинге)
+  POST http://arch.homework/register  
+  201 Created ★ 2.7s time ★ 472B↑ 446B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 185B
+  │ {
+  │   "username": "Adriel821792266034455",
+  │   "password": "wxCKjSMkrwgQHPK",
+  │   "firstName": "Juston",
+  │   "lastName": "Barton",
+  │   "email": "Tierra53@yahoo.com",
+  │   "phone": "+7555-606-6037"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 138B
+  │ {"id":2,"username":"Adriel821792266034455","firstName"
+  │ :"Juston","lastName":"Barton","email":"Tierra53@yahoo.
+  │ com","phone":"+7555-606-6037"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  68ms      8ms    1ms          546µs           2.6s             18ms       750µs     2.7s  
+
+  ✓  status 201
+
+→ 2. Вход
+  POST http://arch.homework/login  
+  200 OK ★ 2s time ★ 351B↑ 504B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 68B
+  │ {"username": "Adriel821792266034455", "password": "wxC
+  │ KjSMkrwgQHPK"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 201B
+  │ {"token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiZXhwIjo
+  │ xNzkyMjY5NjM5LCJpYXQiOjE3OTIyNjYwMzksInVzZXJuYW1lIjoiQ
+  │ WRyaWVsODIxNzkyMjY2MDM0NDU1In0.ka4VvRY7bol5jKopwG4rtdo
+  │ -E-wmsyIIkZkJf9hj8Kc","expiresIn":3600}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       1ms    (cache)      (cache)         2s               5ms        159µs     2s    
+
+  ✓  status 200
+
+→ 3. Счёт создан, баланс 0
+  GET http://arch.homework/billing/account  
+  200 OK ★ 117ms time ★ 436B↑ 159B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 27B
+  │ {"userId":2,"balance":0.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       485µs   (cache)      (cache)         112ms            3ms        142µs     119ms 
+
+  ✓  status 200
+  ✓  own account with zero balance
+
+→ 4. Пополнение счёта на 100
+  POST http://arch.homework/billing/account/deposit  
+  200 OK ★ 262ms time ★ 512B↑ 161B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 15B
+  │ {"amount": 100}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 29B
+  │ {"userId":2,"balance":100.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       363µs   (cache)      (cache)         257ms            3ms        129µs     263ms 
+
+  ✓  status 200
+  ✓  balance 100
+
+→ 5. Заказ на 60 — денег хватает
+  POST http://arch.homework/orders  
+  201 Created ★ 1245ms time ★ 493B↑ 242B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 13B
+  │ {"price": 60}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 104B
+  │ {"id":1,"userId":2,"price":60,"status":"NEW","reason":
+  │ null,"createdAt":"2026-10-17T19:40:41.802958452Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total  
+  1ms       414µs   (cache)      (cache)         1240ms           3ms        307µs     1246ms 
+
+  ✓  status 201
+  ✓  order NEW
+
+→ 6. Деньги списаны, баланс 40
+  GET http://arch.homework/billing/account  
+  200 OK ★ 29ms time ★ 436B↑ 160B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"userId":2,"balance":40.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       383µs   (cache)      (cache)         24ms             3ms        97µs      30ms  
+
+  ✓  status 200
+  ✓  balance 40
+
+→ 7. Заказ оплачен
+  GET http://arch.homework/orders/1  
+  200 OK ★ 1599ms time ★ 429B↑ 238B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 105B
+  │ {"id":1,"userId":2,"price":60.00,"status":"PAID","reas
+  │ on":null,"createdAt":"2026-10-17T19:40:41.802958Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total  
+  2ms       388µs   (cache)      (cache)         1594ms           3ms        89µs      1600ms 
+
+  ✓  status 200
+  ✓  order PAID
+
+→ 8. Письмо об оплате отправлено
+  GET http://arch.homework/notifications  
+  200 OK ★ 1681ms time ★ 434B↑ 356B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 223B
+  │ [{"id":1,"userId":2,"email":"Tierra53@yahoo.com","subj
+  │ ect":"Заказ 1 оплачен","body":"С вашего счёта списано 
+  │ 60. Спасибо за покупку!","createdAt":"2026-10-17T19:40
+  │ :42.893910Z"}]
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total  
+  3ms       449µs   (cache)      (cache)         1676ms           3ms        108µs     1683ms 
+
+  ✓  status 200
+  ✓  one happy letter for order 1
+
+→ 9. Заказ на 100 — денег не хватает
+  POST http://arch.homework/orders  
+  201 Created ★ 29ms time ★ 494B↑ 243B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 14B
+  │ {"price": 100}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 105B
+  │ {"id":2,"userId":2,"price":100,"status":"NEW","reason"
+  │ :null,"createdAt":"2026-10-17T19:40:48.083867224Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       518µs   (cache)      (cache)         24ms             3ms        70µs      31ms  
+
+  ✓  status 201
+
+→ 10. Баланс не изменился, 40
+  GET http://arch.homework/billing/account  
+  200 OK ★ 23ms time ★ 436B↑ 160B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"userId":2,"balance":40.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       638µs   (cache)      (cache)         19ms             2ms        108µs     24ms  
+
+  ✓  status 200
+  ✓  balance still 40
+
+→ 11. Заказ отклонён
+  GET http://arch.homework/orders/2  
+  200 OK ★ 37ms time ★ 429B↑ 259B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 126B
+  │ {"id":2,"userId":2,"price":100.00,"status":"REJECTED",
+  │ "reason":"insufficient funds","createdAt":"2026-10-17T
+  │ 19:40:48.083867Z"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  5ms       1ms    (cache)      (cache)         31ms             3ms        209µs     42ms  
+
+  ✓  status 200
+  ✓  order REJECTED with reason
+
+→ 12. Письмо об отказе отправлено
+  GET http://arch.homework/notifications  
+  200 OK ★ 35ms time ★ 434B↑ 587B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 454B
+  │ [{"id":2,"userId":2,"email":"Tierra53@yahoo.com","subj
+  │ ect":"Заказ 2 отклонён","body":"Оплатить заказ на сумм
+  │ у 100 не удалось: insufficient funds.","createdAt":"20
+  │ 26-10-17T19:40:48.132884Z"},{"id":1,"userId":2,"email"
+  │ :"Tierra53@yahoo.com","subject":"Заказ 1 оплачен","bod
+  │ y":"С вашего счёта списано 60. Спасибо за покупку!","c
+  │ reatedAt":"2026-10-17T19:40:42.893910Z"}]
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       471µs   (cache)      (cache)         31ms             2ms        97µs      37ms  
+
+  ✓  status 200
+  ✓  two letters, newest is the sad one
+
+┌─────────────────────────┬─────────────────────┬────────────────────┐
+│                         │            executed │             failed │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│              iterations │                   1 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│                requests │                  12 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│            test-scripts │                  12 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│      prerequest-scripts │                   4 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│              assertions │                  21 │                  0 │
+├─────────────────────────┴─────────────────────┴────────────────────┤
+│ total run duration: 15.8s                                          │
+├────────────────────────────────────────────────────────────────────┤
+│ total data received: 1.57kB (approx)                               │
+├────────────────────────────────────────────────────────────────────┤
+│ average response time: 818ms [min: 23ms, max: 2.7s, s.d.: 938ms]   │
+├────────────────────────────────────────────────────────────────────┤
+│ average DNS lookup time: 1ms [min: 1ms, max: 1ms, s.d.: 0µs]       │
+├────────────────────────────────────────────────────────────────────┤
+│ average first byte time: 811ms [min: 19ms, max: 2.6s, s.d.: 933ms] │
+└────────────────────────────────────────────────────────────────────┘
