@@ -1,0 +1,31 @@
+# rewrite-target действует на все пути, поэтому оба записаны regex-ом с двумя группами:
+# /health            -> /health
+# /otusapp/boldyrev/x -> /x
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: health-service
+  namespace: msa
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: arch.homework
+      http:
+        paths:
+          - path: /()(health/?)$
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: health-service
+                port:
+                  name: http
+          - path: /otusapp/boldyrev(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: health-service
+                port:
+                  name: http

@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "hw3 health-service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "arch.homework" }
+  ],
+  "item": [
+    {
+      "name": "GET /health",
+      "request": {
+        "method": "GET",
+        "url": "http://{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('body {\"status\":\"OK\"}', () => pm.expect(pm.response.json()).to.eql({ status: 'OK' }));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /otusapp/boldyrev/health",
+      "request": {
+        "method": "GET",
+        "url": "http://{{baseUrl}}/otusapp/boldyrev/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('body {\"status\":\"OK\"}', () => pm.expect(pm.response.json()).to.eql({ status: 'OK' }));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
