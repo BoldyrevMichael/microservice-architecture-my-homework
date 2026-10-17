@@ -31,9 +31,9 @@ Kafka, каждый шаг добавляет в него свой `status` и `
 | `order.delivery FAILED` | warehouse-service и billing-service | склад снимает резерв по `orderId`, биллинг возвращает `price` |
 
 Почему хореография, а не оркестратор или двухфазный коммит: шагов три и порядок линейный,
-каждый сервис знает только свои темы, а Kafka и события уже есть с hw7; откаты это обычные
-обработчики событий об отказе. Двухфазный коммит потребовал бы блокировок в трёх базах и
-координатора, что для такого потока избыточно. Ключ сообщений во всех темах — `orderId`,
+каждый сервис знает только свои темы, а Kafka и события уже лежат в основе заказов и
+уведомлений; откаты это обычные обработчики событий об отказе. Двухфазный коммит потребовал
+бы блокировок в трёх базах и координатора, что для такого потока избыточно. Ключ сообщений во всех темах — `orderId`,
 поэтому события одного заказа обрабатываются по порядку. По условию задания сбои сервисов и
 повторная доставка не рассматриваются.
 
@@ -42,8 +42,11 @@ Kafka, каждый шаг добавляет в него свой `status` и `
 ![Схема](docs/architecture.png)
 
 Шесть сервисов в namespace `msa`, у каждого своя база в одном кластере PostgreSQL,
-общая Kafka, вход через ingress-nginx с проверкой JWT в user-service (`auth-url`,
-заголовок `X-User-Id`). На складе два товара: `1` с остатком 100 и `2` с остатком 0; курьер
+общая Kafka. Клиент ходит ко всем сервисам по HTTP через ingress-nginx: регистрация и вход в
+user-service, пополнение и баланс в billing-service, заказы в order-service, остатки на складе,
+резервы курьера и письма в своих сервисах. На защищённых путях ingress-nginx проверяет JWT
+запросом в user-service (`auth-url`) и подставляет `X-User-Id`. Между собой сервисы по HTTP не
+общаются: только события через Kafka. На складе два товара: `1` с остатком 100 и `2` с остатком 0; курьер
 один, поэтому слот можно занять один раз.
 
 ## API
@@ -52,7 +55,8 @@ Kafka, каждый шаг добавляет в него свой `status` и `
 
 | Метод | Путь | Ответ |
 |---|---|---|
-| `POST /register`, `POST /login` | как в hw6 | 201 / 200 `{token}` |
+| `POST /register` | `{username, password, firstName, lastName, email, phone}` | 201 пользователь; событие `user.registered` |
+| `POST /login` | `{username, password}` | 200 `{token, expiresIn}` |
 | `GET /billing/account`, `POST /billing/account/deposit {amount}` | | 200 `{userId, balance}` |
 | `POST /orders` | `{price, productId, quantity, slot}` | 201 заказ `NEW`; запуск саги |
 | `GET /orders`, `GET /orders/{id}` | | `status`: `NEW`, `PAID`, `RESERVED`, `CONFIRMED`, `CANCELLED` + `reason` |
@@ -62,19 +66,37 @@ Kafka, каждый шаг добавляет в него свой `status` и `
 
 ## Состав
 
-- `services/<имя>/` — шесть Gradle-проектов: user, billing, order, warehouse, delivery,
-  notification; раскладка как в hw7, события в пакете `event`, снимок заказа — запись
-  `OrderEvent`. Образы `boldyrevma/<имя>:hw8`.
+- `services/<имя>/` — шесть самостоятельных Gradle-проектов: user, billing, order, warehouse,
+  delivery, notification; у каждого `controller`, `service`, `repository`, `entity`, `dto`,
+  `event` (записи событий, слушатели `@KafkaListener`, издатели через `KafkaTemplate`; снимок
+  заказа — запись `OrderEvent`), миграции Flyway, тесты, Dockerfile. Образы
+  `boldyrevma/<имя>:hw8`.
+- `helm/service/` — общий чарт сервиса, `helm/values/<имя>.yaml` — значения шести сервисов.
 - `k8s/` — namespace, Secret, пять `Database`, шесть `KafkaTopic`, по файлу на сервис,
   два Ingress. `kafka/kafka.yaml` — Kafka для Strimzi, `db/` — values CloudNativePG.
 - `postman/order-saga.postman_collection.json` — сценарий: успешная сага и три отказа с
   проверкой откатов; `postman/newman-output.txt` — вывод прогона.
 - `docs/` — схемы саги и архитектуры.
+- `kind/`, `ingress-nginx/` — конфигурация кластера и ingress-контроллера.
+
+## Кластер и ingress-nginx
+
+```bash
+minikube start --driver=docker --ports=127.0.0.1:80:80,127.0.0.1:443:443 --memory 6g
+# или: kind create cluster --config kind/cluster.yaml
+# в /etc/hosts: 127.0.0.1 arch.homework
+
+kubectl create namespace m
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx/
+helm repo update
+helm install nginx ingress-nginx/ingress-nginx --namespace m -f ingress-nginx/values.yaml
+kubectl -n m rollout status daemonset/nginx-ingress-nginx-controller
+```
 
 ## Установка
 
-Namespace приложения `msa`, операторы в `cnpg-system` и `kafka`; кластер и ingress-nginx
-как в hw7.
+Namespace приложения `msa`, операторы в своих: CloudNativePG в `cnpg-system`, Strimzi в
+`kafka` (он следит за ресурсами Kafka в `msa`).
 
 ```bash
 helm repo add cnpg https://cloudnative-pg.github.io/charts
@@ -93,11 +115,39 @@ helm install msa-db cnpg/cluster --namespace msa -f db/values.yaml
 kubectl apply -f kafka/kafka.yaml
 kubectl -n msa wait cluster/msa-db --for=condition=Ready --timeout=300s
 kubectl -n msa wait kafka/msa-kafka --for=condition=Ready --timeout=600s
+```
 
+Сервисы, путь 1: манифестами. Одна команда применяет всё по порядку номеров: базы, темы,
+миграции, приложения, Ingress; Job и поды дожидаются базы через initContainer:
+
+```bash
 kubectl apply -f k8s/
 kubectl -n msa wait job --all --for=condition=complete --timeout=300s
 kubectl -n msa rollout status deployment --timeout=300s
 ```
+
+Сервисы, путь 2: общим чартом. Чарт `helm/service` описывает ConfigMap, Job миграций,
+Deployment и Service, различия между сервисами (образ, база, секреты) лежат в
+`helm/values/<имя>.yaml`, имя релиза становится именем сервиса, на него ссылаются Ingress.
+Базы, темы и Ingress остаются манифестами, чарт ставится шесть раз:
+
+```bash
+kubectl apply -f k8s/02-databases.yaml -f k8s/03-kafka-topics.yaml
+helm install user-service helm/service --namespace msa -f helm/values/user-service.yaml
+helm install billing-service helm/service --namespace msa -f helm/values/billing-service.yaml
+helm install order-service helm/service --namespace msa -f helm/values/order-service.yaml
+helm install warehouse-service helm/service --namespace msa -f helm/values/warehouse-service.yaml
+helm install delivery-service helm/service --namespace msa -f helm/values/delivery-service.yaml
+helm install notification-service helm/service --namespace msa -f helm/values/notification-service.yaml
+kubectl apply -f k8s/40-ingress.yaml -f k8s/41-ingress-auth.yaml
+kubectl -n msa wait job --all --for=condition=complete --timeout=300s
+kubectl -n msa rollout status deployment --timeout=300s
+```
+
+Один чарт вместо шести копий: шаблоны одни, различается только values. В продуктовой
+раскладке такие шаблоны выносят в library-чарт, а чарт каждого сервиса держат рядом с его
+кодом; здесь это был бы лишний слой. Обновление сервиса — `helm upgrade` с новым тегом
+образа, Job миграций создаётся заново с номером ревизии.
 
 Образы собираются и публикуются из каждого `services/<имя>` командами
 `./gradlew build`, `docker build --platform linux/amd64 -t boldyrevma/<имя>:hw8 .`,
@@ -118,11 +168,23 @@ out of stock`, деньги вернулись, баланс 40; заказ на
 
 ## Удаление
 
+Темы Kafka удаляются первыми, пока жив topic operator: у `KafkaTopic` стоит его финализатор, и
+если удалить namespace целиком, темы останутся висеть и не дадут namespace исчезнуть.
+
 ```bash
-kubectl delete -f k8s/
+kubectl delete -f k8s/03-kafka-topics.yaml
+helm uninstall user-service billing-service order-service warehouse-service delivery-service notification-service -n msa   # только при установке чартом
+helm uninstall msa-db --namespace msa
+kubectl delete -f k8s/                       # приложения, базы, Kafka, namespace msa с томами
 helm uninstall strimzi --namespace kafka && kubectl delete namespace kafka
 helm uninstall cnpg --namespace cnpg-system && kubectl delete namespace cnpg-system
 helm uninstall nginx --namespace m && kubectl delete namespace m
 ```
 
-Удаление namespace `msa` уносит кластер PostgreSQL и Kafka вместе с томами.
+Релиз базы снимается до удаления namespace: вместе с namespace исчезает и запись helm о
+релизе; Kafka удаляется вместе с namespace.
+
+Если после удаления namespace `msa` ставить приложение заново, не переустанавливая Strimzi,
+сначала повторите `helm upgrade strimzi ...` с теми же параметрами: оператор держит свои
+права (RoleBinding) внутри наблюдаемого namespace, они исчезают вместе с ним, и без этого
+шага Kafka в новом `msa` не создастся.
