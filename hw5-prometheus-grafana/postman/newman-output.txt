@@ -1,0 +1,58 @@
+newman
+
+hw5 user-service
+
+→ GET /health
+  GET http://arch.homework/health [200 OK, 147B, 109ms]
+  ✓  status 200
+  ✓  body {"status":"OK"}
+
+→ POST /user — создание
+  POST http://arch.homework/user [201 Created, 268B, 17ms]
+  ✓  status 201
+  ✓  id assigned
+  ✓  fields saved
+
+→ GET /user/{id} — чтение
+  GET http://arch.homework/user/863 [200 OK, 263B, 9ms]
+  ✓  status 200
+  ✓  same user
+
+→ PUT /user/{id} — изменение
+  PUT http://arch.homework/user/863 [200 OK, 264B, 13ms]
+  ✓  status 200
+  ✓  profile updated, username kept
+
+→ GET /user/{id} — после изменения
+  GET http://arch.homework/user/863 [200 OK, 264B, 7ms]
+  ✓  status 200
+  ✓  changes persisted
+
+→ DELETE /user/{id} — удаление
+  DELETE http://arch.homework/user/863 [204 No Content, 88B, 12ms]
+  ✓  status 204
+
+→ GET /user/{id} — после удаления
+  GET http://arch.homework/user/863 [404 Not Found, 182B, 11ms]
+  ✓  status 404
+  ✓  error body
+
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                 7 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                 7 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                14 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 381ms                                      │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 580B (approx)                             │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 25ms [min: 7ms, max: 109ms, s.d.: 34ms] │
+└────────────────────────────────────────────────────────────────┘

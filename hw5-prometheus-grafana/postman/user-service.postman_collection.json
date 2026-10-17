@@ -1,0 +1,100 @@
+{
+  "info": {
+    "name": "hw5 user-service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "arch.homework" },
+    { "key": "userId", "value": "" },
+    { "key": "username", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "GET /health",
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/health" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('body {\"status\":\"OK\"}', () => pm.expect(pm.response.json()).to.eql({ status: 'OK' }));"
+      ] } }]
+    },
+    {
+      "name": "POST /user — создание",
+      "request": {
+        "method": "POST",
+        "url": "http://{{baseUrl}}/user",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"bestjohn@doe.com\",\n  \"phone\": \"+71002003040\"\n}" }
+      },
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "pm.collectionVariables.set('username', 'johndoe' + Date.now());"
+        ] } },
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('status 201', () => pm.response.to.have.status(201));",
+          "const user = pm.response.json();",
+          "pm.test('id assigned', () => pm.expect(user.id).to.be.a('number'));",
+          "pm.test('fields saved', () => {",
+          "  pm.expect(user.username).to.eql(pm.collectionVariables.get('username'));",
+          "  pm.expect(user.firstName).to.eql('John');",
+          "  pm.expect(user.email).to.eql('bestjohn@doe.com');",
+          "});",
+          "pm.collectionVariables.set('userId', user.id);"
+        ] } }
+      ]
+    },
+    {
+      "name": "GET /user/{id} — чтение",
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/user/{{userId}}" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "const user = pm.response.json();",
+        "pm.test('same user', () => {",
+        "  pm.expect(user.id).to.eql(Number(pm.collectionVariables.get('userId')));",
+        "  pm.expect(user.username).to.eql(pm.collectionVariables.get('username'));",
+        "  pm.expect(user.lastName).to.eql('Doe');",
+        "});"
+      ] } }]
+    },
+    {
+      "name": "PUT /user/{id} — изменение",
+      "request": {
+        "method": "PUT",
+        "url": "http://{{baseUrl}}/user/{{userId}}",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Julie\",\n  \"lastName\": \"Doe\",\n  \"email\": \"bestjohn@doe.com\",\n  \"phone\": \"+71004242424\"\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "const user = pm.response.json();",
+        "pm.test('profile updated, username kept', () => {",
+        "  pm.expect(user.firstName).to.eql('Julie');",
+        "  pm.expect(user.phone).to.eql('+71004242424');",
+        "  pm.expect(user.username).to.eql(pm.collectionVariables.get('username'));",
+        "});"
+      ] } }]
+    },
+    {
+      "name": "GET /user/{id} — после изменения",
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/user/{{userId}}" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('changes persisted', () => pm.expect(pm.response.json().firstName).to.eql('Julie'));"
+      ] } }]
+    },
+    {
+      "name": "DELETE /user/{id} — удаление",
+      "request": { "method": "DELETE", "url": "http://{{baseUrl}}/user/{{userId}}" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 204', () => pm.response.to.have.status(204));"
+      ] } }]
+    },
+    {
+      "name": "GET /user/{id} — после удаления",
+      "request": { "method": "GET", "url": "http://{{baseUrl}}/user/{{userId}}" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status 404', () => pm.response.to.have.status(404));",
+        "pm.test('error body', () => pm.expect(pm.response.json().code).to.eql(404));"
+      ] } }]
+    }
+  ]
+}

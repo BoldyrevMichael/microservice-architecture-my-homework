@@ -1,0 +1,30 @@
+# кластер PostgreSQL для user-service (chart cnpg/cluster)
+fullnameOverride: user-db
+type: postgresql
+version:
+  postgresql: "18"
+mode: standalone
+
+cluster:
+  instances: 1
+  storage:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  enableSuperuserAccess: false
+  initdb:
+    database: users
+    owner: app
+    secret:
+      name: user-db-credentials  # k8s/11-secret.yaml
+  # встроенный экспортер метрик PostgreSQL и PodMonitor для Prometheus
+  monitoring:
+    enabled: true
+
+backups:
+  enabled: false

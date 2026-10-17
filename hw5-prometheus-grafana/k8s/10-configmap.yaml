@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: msa
+data:
+  DB_URL: jdbc:postgresql://user-db-rw:5432/users
