@@ -1,0 +1,28 @@
+# один кластер PostgreSQL на стенд (chart cnpg/cluster); базы сервисов — ресурсы Database
+# в k8s/02-databases.yaml, владелец у всех один — пользователь app из Secret
+fullnameOverride: msa-db
+type: postgresql
+version:
+  postgresql: "18"
+mode: standalone
+
+cluster:
+  instances: 1
+  storage:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  enableSuperuserAccess: false
+  initdb:
+    database: users
+    owner: app
+    secret:
+      name: msa-db-credentials  # k8s/01-secrets.yaml
+
+backups:
+  enabled: false

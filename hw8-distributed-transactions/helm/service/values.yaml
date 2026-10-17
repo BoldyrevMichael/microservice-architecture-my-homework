@@ -1,0 +1,45 @@
+# Значения по умолчанию. То, что различается между сервисами, лежит в helm/values/<сервис>.yaml,
+# Helm сливает файлы слева направо. Имя релиза используется как имя сервиса.
+
+image:
+  repository: boldyrevma/service
+  tag: hw8
+
+replicas: 1
+port: 8000
+
+# пробы по /health; старт JVM занимает до минуты, до его конца liveness не работает
+probes:
+  path: /health
+  startupFailureThreshold: 24
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+# настройки в ConfigMap (env) и ссылки на Secret (envFromSecret: имя переменной → секрет и ключ)
+env:
+  KAFKA_BOOTSTRAP: msa-kafka-kafka-bootstrap:9092
+envFromSecret:
+  DB_USERNAME:
+    secret: msa-db-credentials
+    key: username
+  DB_PASSWORD:
+    secret: msa-db-credentials
+    key: password
+
+# initContainer ждёт порт базы, чтобы JVM стартовала один раз
+waitFor:
+  host: msa-db-rw
+  port: 5432
+
+# Job миграций Flyway тем же образом в профиле migrate; на каждую ревизию релиза новая Job
+migration:
+  enabled: true
+
+# тот же пользователь, что в образе
+runAsUser: 10001

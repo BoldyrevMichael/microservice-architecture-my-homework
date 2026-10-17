@@ -1,0 +1,329 @@
+newman
+
+hw8 сага заказа: биллинг, склад, доставка
+
+❏ 1. Регистрация и вход
+↳ Регистрация
+  POST http://arch.homework/register  
+  201 Created ★ 3s time ★ 488B↑ 462B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 201B
+  │ {
+  │   "username": "Kitty_Williamson671792267063931",
+  │   "password": "qVsXtNReaXNGntg",
+  │   "firstName": "Margaret",
+  │   "lastName": "Bins",
+  │   "email": "Telly_Schuster@yahoo.com",
+  │   "phone": "+7702-861-6874"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 154B
+  │ {"id":1,"username":"Kitty_Williamson671792267063931","
+  │ firstName":"Margaret","lastName":"Bins","email":"Telly
+  │ _Schuster@yahoo.com","phone":"+7702-861-6874"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  68ms      11ms   1ms          719µs           2.9s             23ms       801µs     3s    
+
+  ✓  status 201
+
+↳ Вход
+  POST http://arch.homework/login  
+  200 OK ★ 2.2s time ★ 361B↑ 517B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 78B
+  │ {"username": "Kitty_Williamson671792267063931", "passw
+  │ ord": "qVsXtNReaXNGntg"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 214B
+  │ {"token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiZXhwIjo
+  │ xNzkyMjcwNjY5LCJpYXQiOjE3OTIyNjcwNjksInVzZXJuYW1lIjoiS
+  │ 2l0dHlfV2lsbGlhbXNvbjY3MTc5MjI2NzA2MzkzMSJ9.FEvjdP3Z--
+  │ mkAAcwV9pEBtncm311A7IoekyB1hr9RsE","expiresIn":3600}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       988µs   (cache)      (cache)         2.2s             5ms        136µs     2.2s  
+
+  ✓  status 200
+
+↳ Пополнение счёта на 100
+  POST http://arch.homework/billing/account/deposit  
+  200 OK ★ 482ms time ★ 525B↑ 161B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 15B
+  │ {"amount": 100}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 29B
+  │ {"userId":1,"balance":100.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       642µs   (cache)      (cache)         477ms            3ms        91µs      484ms 
+
+  ✓  status 200
+  ✓  balance 100
+
+↳ Остаток товара 1 до заказов
+  GET http://arch.homework/warehouse/products/1  
+  200 OK ★ 650ms time ★ 454B↑ 184B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 52B
+  │ {"id":1,"name":"Сэндвич BLT","available":100}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  6ms       757µs   (cache)      (cache)         645ms            3ms        139µs     656ms 
+
+  ✓  status 200
+
+❏ 2. Успешная сага: оплата, резерв товара, резерв курьера
+↳ Заказ: 60, товар 1 × 2, свободный слот
+  POST http://arch.homework/orders  
+  201 Created ★ 1441ms time ★ 566B↑ 296B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 73B
+  │ {"price": 60, "productId": 1, "quantity": 2, "slot": "
+  │ 2026-10-20T063932"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 158B
+  │ {"id":1,"userId":1,"price":60,"productId":1,"quantity"
+  │ :2,"slot":"2026-10-20T063932","status":"NEW","reason":
+  │ null,"createdAt":"2026-10-17T19:57:52.807252465Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total  
+  5ms       589µs   (cache)      (cache)         1435ms           3ms        131µs     1445ms 
+
+  ✓  status 201
+
+↳ Заказ CONFIRMED
+  GET http://arch.homework/orders/1  
+  200 OK ★ 1982ms time ★ 442B↑ 297B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 164B
+  │ {"id":1,"userId":1,"price":60.00,"productId":1,"quanti
+  │ ty":2,"slot":"2026-10-20T063932","status":"CONFIRMED",
+  │ "reason":null,"createdAt":"2026-10-17T19:57:52.807252Z
+  │ "}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total  
+  3ms       423µs   (cache)      (cache)         1977ms           3ms        159µs     1984ms 
+
+  ✓  status 200
+  ✓  CONFIRMED
+
+↳ Баланс 40
+  GET http://arch.homework/billing/account  
+  200 OK ★ 40ms time ★ 449B↑ 160B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"userId":1,"balance":40.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       541µs   (cache)      (cache)         35ms             3ms        304µs     42ms  
+
+  ✓  balance 40
+
+↳ Остаток товара 1 уменьшился на 2
+  GET http://arch.homework/warehouse/products/1  
+  200 OK ★ 29ms time ★ 454B↑ 183B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 51B
+  │ {"id":1,"name":"Сэндвич BLT","available":98}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       365µs   (cache)      (cache)         24ms             3ms        128µs     30ms  
+
+  ✓  stock -2
+
+↳ Курьер зарезервирован на слот
+  GET http://arch.homework/delivery/reservations  
+  200 OK ★ 151ms time ★ 455B↑ 174B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 42B
+  │ [{"orderId":1,"slot":"2026-10-20T063932"}]
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       518µs   (cache)      (cache)         147ms            2ms        81µs      153ms 
+
+  ✓  reservation for order
+
+❏ 3. Отказ биллинга: денег не хватает
+↳ Заказ: 100 при балансе 40
+  POST http://arch.homework/orders  
+  201 Created ★ 37ms time ★ 569B↑ 299B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 76B
+  │ {"price": 100, "productId": 1, "quantity": 1, "slot": 
+  │ "2026-10-20T063932-b"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 161B
+  │ {"id":2,"userId":1,"price":100,"productId":1,"quantity
+  │ ":1,"slot":"2026-10-20T063932-b","status":"NEW","reaso
+  │ n":null,"createdAt":"2026-10-17T19:57:58.982102234Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       709µs   (cache)      (cache)         31ms             3ms        99µs      39ms  
+
+  ✓  status 201
+
+↳ Заказ CANCELLED: insufficient funds
+  GET http://arch.homework/orders/2  
+  200 OK ★ 42ms time ★ 442B↑ 316B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 183B
+  │ {"id":2,"userId":1,"price":100.00,"productId":1,"quant
+  │ ity":1,"slot":"2026-10-20T063932-b","status":"CANCELLE
+  │ D","reason":"insufficient funds","createdAt":"2026-10-
+  │ 17T19:57:58.982102Z"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  6ms       1ms    (cache)      (cache)         35ms             5ms        349µs     48ms  
+
+  ✓  CANCELLED with reason
+
+↳ Баланс по-прежнему 40, остаток товара не тронут
+  GET http://arch.homework/billing/account  
+  200 OK ★ 49ms time ★ 449B↑ 160B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"userId":1,"balance":40.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  4ms       636µs   (cache)      (cache)         44ms             3ms        93µs      53ms  
+
+  ✓  balance 40
+
+❏ 4. Отказ склада: товар закончился, деньги возвращены
+↳ Заказ: 10, товар 2 (остаток 0)
+  POST http://arch.homework/orders  
+  201 Created ★ 37ms time ★ 568B↑ 298B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 75B
+  │ {"price": 10, "productId": 2, "quantity": 1, "slot": "
+  │ 2026-10-20T063932-c"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 160B
+  │ {"id":3,"userId":1,"price":10,"productId":2,"quantity"
+  │ :1,"slot":"2026-10-20T063932-c","status":"NEW","reason
+  │ ":null,"createdAt":"2026-10-17T19:58:02.224670915Z"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  4ms       1ms    (cache)      (cache)         31ms             4ms        96µs      41ms  
+
+  ✓  status 201
+
+↳ Заказ CANCELLED: out of stock
+  GET http://arch.homework/orders/3  
+  200 OK ★ 33ms time ★ 442B↑ 322B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 189B
+  │ {"id":3,"userId":1,"price":10.00,"productId":2,"quanti
+  │ ty":1,"slot":"2026-10-20T063932-c","status":"CANCELLED
+  │ ","reason":"product 2 is out of stock","createdAt":"20
+  │ 26-10-17T19:58:02.224671Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  4ms       924µs   (cache)      (cache)         27ms             3ms        248µs     36ms  
+
+  ✓  CANCELLED out of stock
+
+↳ Деньги вернулись: баланс 40
+  GET http://arch.homework/billing/account  
+  200 OK ★ 30ms time ★ 449B↑ 160B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"userId":1,"balance":40.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       649µs   (cache)      (cache)         25ms             2ms        379µs     32ms  
+
+  ✓  refunded to 40
+
+❏ 5. Отказ доставки: слот занят, товар и деньги возвращены
+↳ Заказ: 10, товар 1 × 1, тот же слот, что у первого заказа
+  POST http://arch.homework/orders  
+  201 Created ★ 41ms time ★ 566B↑ 296B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 73B
+  │ {"price": 10, "productId": 1, "quantity": 1, "slot": "
+  │ 2026-10-20T063932"}
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 158B
+  │ {"id":4,"userId":1,"price":10,"productId":1,"quantity"
+  │ :1,"slot":"2026-10-20T063932","status":"NEW","reason":
+  │ null,"createdAt":"2026-10-17T19:58:05.465951584Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       701µs   (cache)      (cache)         35ms             4ms        114µs     43ms  
+
+  ✓  status 201
+
+↳ Заказ CANCELLED: no courier
+  GET http://arch.homework/orders/4  
+  200 OK ★ 30ms time ★ 442B↑ 336B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 203B
+  │ {"id":4,"userId":1,"price":10.00,"productId":1,"quanti
+  │ ty":1,"slot":"2026-10-20T063932","status":"CANCELLED",
+  │ "reason":"no courier available at 2026-10-20T063932","
+  │ createdAt":"2026-10-17T19:58:05.465952Z"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  2ms       474µs   (cache)      (cache)         23ms             5ms        79µs      31ms  
+
+  ✓  CANCELLED no courier
+
+↳ Резерв товара снят: остаток как после первого заказа
+  GET http://arch.homework/warehouse/products/1  
+  200 OK ★ 35ms time ★ 454B↑ 183B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 51B
+  │ {"id":1,"name":"Сэндвич BLT","available":98}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       495µs   (cache)      (cache)         29ms             4ms        87µs      37ms  
+
+  ✓  stock released
+
+↳ Деньги вернулись: баланс 40
+  GET http://arch.homework/billing/account  
+  200 OK ★ 28ms time ★ 449B↑ 160B↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"userId":1,"balance":40.00}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  3ms       409µs   (cache)      (cache)         24ms             3ms        111µs     31ms  
+
+  ✓  refunded to 40
+
+↳ Письма: одно подтверждение и три отмены
+  GET http://arch.homework/notifications  
+  200 OK ★ 1834ms time ★ 447B↑ 1.23kB↓ size ★ 8↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 1.1kB
+  │ [{"id":4,"userId":1,"email":"Telly_Schuster@yahoo.com"
+  │ ,"subject":"Заказ 4 отменён","body":"Заказ на сумму 10
+  │ .00 отменён: no courier available at 2026-10-20T063932
+  │ . Деньги возвращены на счёт.","createdAt":"2026-10-17T
+  │ 19:58:05.591852Z"},{"id":3,"userId":1,"email":"Telly_S
+  │ chuster@yahoo.com","subject":"Заказ 3 отменён","body":
+  │ "Заказ на сумму 10.00 отменён: product 2 is out of sto
+  │ ck. Деньги возвращены на счёт.","createdAt":"2026-10-1
+  │ 7T19:58:02.363514Z"},{"id":2,"userId":1,"email":"Telly
+  │ _Schuster@yahoo.com","subject":"Заказ 2 отменён","body
+  │ ":"Заказ на сумму 100.00 отменён: insufficient funds. 
+  │ Деньги возвращены на счёт.","createdAt":"2026-10-17T19
+  │ :57:59.059568Z"},{"id":1,"userId":1,"email":"Telly_Sch
+  │ uster@yahoo.com","subject":"Заказ 1 подтверждён","body
+  │ ":"Оплата 60.00 прошла, товар зарезервирован, курьер н
+  │ азначен. Спасибо!","createdAt":"2026-10-17T19:57:57.46
+  │ 2971Z"}]
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total  
+  2ms       602µs   (cache)      (cache)         1829ms           3ms        69µs      1835ms 
+
+  ✓  4 letters
+  ✓  subjects
+
+┌─────────────────────────┬─────────────────────┬────────────────────┐
+│                         │            executed │             failed │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│              iterations │                   1 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│                requests │                  20 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│            test-scripts │                  20 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│      prerequest-scripts │                   6 │                  0 │
+├─────────────────────────┼─────────────────────┼────────────────────┤
+│              assertions │                  23 │                  0 │
+├─────────────────────────┴─────────────────────┴────────────────────┤
+│ total run duration: 26.6s                                          │
+├────────────────────────────────────────────────────────────────────┤
+│ total data received: 3.18kB (approx)                               │
+├────────────────────────────────────────────────────────────────────┤
+│ average response time: 613ms [min: 28ms, max: 3s, s.d.: 916ms]     │
+├────────────────────────────────────────────────────────────────────┤
+│ average DNS lookup time: 1ms [min: 1ms, max: 1ms, s.d.: 0µs]       │
+├────────────────────────────────────────────────────────────────────┤
+│ average first byte time: 606ms [min: 23ms, max: 2.9s, s.d.: 911ms] │
+└────────────────────────────────────────────────────────────────────┘

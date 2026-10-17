@@ -1,0 +1,4 @@
+image:
+  repository: boldyrevma/delivery-service
+env:
+  DB_URL: jdbc:postgresql://msa-db-rw:5432/delivery
